@@ -95,6 +95,56 @@ bootstrap_repo() {
   git -C "$REPO_DIR" checkout "$SKYREELS_REF"
   git -C "$REPO_DIR" pull --ff-only
 
+  log "Patching SkyReels CLI for negative prompt support"
+  "$PYTHON_BIN" - <<'PY' "$REPO_DIR/generate_video.py"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+
+arg_block = """    parser.add_argument(
+        "--negative_prompt",
+        type=str,
+        default="",
+        help="[reference_to_video] Negative prompt describing what to avoid in the generated video.",
+    )
+"""
+
+marker = """    parser.add_argument(
+        "--resolution",
+"""
+
+call_old = """        video_out = pipe.generate_video(args.ref_imgs, args.prompt, args.duration, args.seed, resolution=args.resolution)
+"""
+
+call_new = """        video_out = pipe.generate_video(
+            args.ref_imgs,
+            args.prompt,
+            args.duration,
+            args.seed,
+            resolution=args.resolution,
+            negative_prompt=args.negative_prompt,
+        )
+"""
+
+changed = False
+if "--negative_prompt" not in text:
+    if marker not in text:
+        raise SystemExit("Could not find resolution argument marker in generate_video.py")
+    text = text.replace(marker, arg_block + marker, 1)
+    changed = True
+
+if call_old in text:
+    text = text.replace(call_old, call_new, 1)
+    changed = True
+elif "negative_prompt=args.negative_prompt" not in text:
+    raise SystemExit("Could not find reference_to_video generate_video call in generate_video.py")
+
+if changed:
+    path.write_text(text)
+PY
+
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
 
@@ -148,6 +198,7 @@ Optional environment variables:
   RESOLUTION=720P
   DURATION=5
   SEED=42
+  NEGATIVE_PROMPT="..."
   OFFLOAD=1
   LOW_VRAM=0
   EXTRA_ARGS="..."
@@ -179,6 +230,7 @@ fi
 RESOLUTION="\${RESOLUTION:-720P}"
 DURATION="\${DURATION:-5}"
 SEED="\${SEED:-42}"
+NEGATIVE_PROMPT="\${NEGATIVE_PROMPT:-}"
 OFFLOAD="\${OFFLOAD:-1}"
 LOW_VRAM="\${LOW_VRAM:-0}"
 EXTRA_ARGS="\${EXTRA_ARGS:-}"
@@ -199,6 +251,10 @@ cmd=(
   --resolution "\$RESOLUTION"
   --seed "\$SEED"
 )
+
+if [[ -n "\$NEGATIVE_PROMPT" ]]; then
+  cmd+=(--negative_prompt "\$NEGATIVE_PROMPT")
+fi
 
 if [[ "\$OFFLOAD" == "1" ]]; then
   cmd+=(--offload)
@@ -263,6 +319,7 @@ Prompt template:
 Recommended first run on a single H100:
   REF_IMGS="$INPUT_DIR/face_front.png,$INPUT_DIR/face_three_quarter.png,$INPUT_DIR/profile.png" \\
   PROMPT="A cinematic close portrait. The subject makes a slight head turn and breathes naturally. Slow dolly in. Stable facial identity, natural micro-expressions, soft ambient motion." \\
+  NEGATIVE_PROMPT="blurry face, inconsistent identity, distorted anatomy, extra limbs, deformed hands, low detail" \\
   $INSTALL_ROOT/run-skyreels-r2v.sh
 
 Official model recommendation:

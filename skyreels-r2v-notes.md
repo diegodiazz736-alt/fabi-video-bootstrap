@@ -104,6 +104,7 @@ Generate:
 ```bash
 REF_IMGS="/abs/front.png,/abs/three_quarter.png,/abs/profile.png" \
 PROMPT="A cinematic close portrait. The subject makes a slight head turn and breathes naturally. Slow dolly in. Stable facial identity, natural micro-expressions, soft ambient motion." \
+NEGATIVE_PROMPT="blurry face, inconsistent identity, distorted anatomy, extra limbs, low detail" \
 $HOME/skyreels-local/run-skyreels-r2v.sh
 ```
 
