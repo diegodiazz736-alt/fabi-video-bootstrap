@@ -10,6 +10,7 @@ REPO_URL="${REPO_URL:-https://github.com/diegodiazz736-alt/fabi-video-bootstrap.
 CHECKOUT_DIR="${CHECKOUT_DIR:-$HOME/fabi-video-bootstrap}"
 BOOTSTRAP_SCRIPT="${BOOTSTRAP_SCRIPT:-bootstrap_skyreels_v3.sh}"
 RUN_BOOTSTRAP="${RUN_BOOTSTRAP:-1}"
+SUDO=""
 
 log() {
   printf '\n[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -25,8 +26,8 @@ need_cmd() {
 install_system_packages() {
   if command -v apt-get >/dev/null 2>&1; then
     log "Installing system packages with apt"
-    sudo apt-get update
-    sudo apt-get install -y \
+    $SUDO apt-get update
+    $SUDO apt-get install -y \
       git \
       curl \
       wget \
@@ -39,7 +40,7 @@ install_system_packages() {
 
   if command -v dnf >/dev/null 2>&1; then
     log "Installing system packages with dnf"
-    sudo dnf install -y \
+    $SUDO dnf install -y \
       git \
       curl \
       wget \
@@ -95,6 +96,11 @@ main() {
   if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
     usage
     exit 0
+  fi
+
+  if [[ "$EUID" -ne 0 ]]; then
+    need_cmd sudo
+    SUDO="sudo"
   fi
 
   install_system_packages
