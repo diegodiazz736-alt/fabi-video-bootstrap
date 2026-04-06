@@ -7,7 +7,7 @@ Local-first bootstrap scripts and notes for running image-to-video workflows on 
 - `install_fresh_wan_comfyui.sh`
   - One-shot fresh-machine installer for the current recommended stack: ComfyUI + Wan 2.2.
 - `bootstrap_comfy_wan22.sh`
-  - Installs ComfyUI, ComfyUI-Manager, official Wan 2.2 workflow JSONs, and the model files needed for 14B I2V and FLF2V usage.
+  - Installs ComfyUI, ComfyUI-Manager, official Wan 2.2 workflow JSONs, the 14B I2V and FLF2V model files, and the LightX2V LoRAs used by the common starter I2V template.
 - `wan22-comfyui-notes.md`
   - Practical notes for controlled Wan 2.2 usage on an H100, especially I2V and first/last-frame work.
 - `bootstrap_skyreels_v3.sh`
@@ -43,6 +43,7 @@ Then in the browser:
 
 - load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_i2v_official.json` for classic image-to-video
 - load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_flf2v_official.json` for first/last-frame control
+- if a starter template expects fp8-scaled Wan diffusion models, switch its two Wan diffusion dropdowns to the installed fp16 pair instead of downloading extra copies immediately
 
 ## Secondary Path
 
@@ -59,3 +60,4 @@ Use it only if you specifically want:
 - Everything here is intended for local execution on your own machine or rented GPU instance.
 - No external generation APIs are required.
 - The Wan 2.2 route is now the primary baseline because it offers official ComfyUI-native I2V and FLF2V workflows.
+- On providers with a small root disk and a large secondary volume, `install_fresh_wan_comfyui.sh` now prefers `/ephemeral/comfy-wan-local` and symlinks back to `$HOME/comfy-wan-local`.

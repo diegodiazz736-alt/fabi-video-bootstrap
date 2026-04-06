@@ -7,6 +7,8 @@ REPO_DIR="${REPO_DIR:-$HOME/fabi-video-bootstrap}"
 BOOTSTRAP_SCRIPT="${BOOTSTRAP_SCRIPT:-$REPO_DIR/bootstrap_comfy_wan22.sh}"
 MODEL_PRESET="${MODEL_PRESET:-a14b_i2v}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
+VISIBLE_INSTALL_ROOT="${VISIBLE_INSTALL_ROOT:-$HOME/comfy-wan-local}"
+INSTALL_ROOT="${INSTALL_ROOT:-}"
 
 log() {
   printf '\n[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -61,16 +63,50 @@ clone_or_update_repo() {
   git -C "$REPO_DIR" pull --ff-only
 }
 
+choose_install_root() {
+  if [[ -n "$INSTALL_ROOT" ]]; then
+    return
+  fi
+
+  if [[ -d /ephemeral ]]; then
+    INSTALL_ROOT="/ephemeral/comfy-wan-local"
+    log "Using /ephemeral for the heavy ComfyUI + Wan install"
+    run_privileged mkdir -p "$INSTALL_ROOT"
+    run_privileged chown "$(id -un):$(id -gn)" "$INSTALL_ROOT"
+    return
+  fi
+
+  INSTALL_ROOT="$VISIBLE_INSTALL_ROOT"
+}
+
+ensure_visible_install_link() {
+  if [[ "$INSTALL_ROOT" == "$VISIBLE_INSTALL_ROOT" ]]; then
+    return
+  fi
+
+  if [[ -L "$VISIBLE_INSTALL_ROOT" || ! -e "$VISIBLE_INSTALL_ROOT" ]]; then
+    rm -f "$VISIBLE_INSTALL_ROOT"
+    ln -s "$INSTALL_ROOT" "$VISIBLE_INSTALL_ROOT"
+    return
+  fi
+
+  echo "Visible install path already exists and is not a symlink: $VISIBLE_INSTALL_ROOT" >&2
+  echo "Use INSTALL_ROOT=... or remove that path before running again." >&2
+  exit 1
+}
+
 main() {
   install_system_packages
   clone_or_update_repo
+  choose_install_root
+  ensure_visible_install_link
 
   log "Running Wan 2.2 + ComfyUI bootstrap"
   chmod +x "$BOOTSTRAP_SCRIPT"
-  MODEL_PRESET="$MODEL_PRESET" "$BOOTSTRAP_SCRIPT"
+  INSTALL_ROOT="$INSTALL_ROOT" MODEL_PRESET="$MODEL_PRESET" "$BOOTSTRAP_SCRIPT"
 
   log "Fresh-machine install complete"
-  printf 'Next step: %s\n' "$HOME/comfy-wan-local/run-comfyui.sh"
+  printf 'Next step: %s\n' "$VISIBLE_INSTALL_ROOT/run-comfyui.sh"
 }
 
 main "$@"

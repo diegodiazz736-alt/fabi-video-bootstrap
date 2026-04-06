@@ -172,6 +172,18 @@ download_a14b_i2v_models() {
   install_named_file "$temp_dir" "wan2.2_i2v_low_noise_14B_fp16.safetensors" "$COMFY_DIR/models/diffusion_models"
 }
 
+download_lightx2v_loras() {
+  local temp_dir="$MODEL_CACHE_DIR/lightx2v_loras"
+  log "Downloading Wan 2.2 LightX2V LoRAs for the starter I2V template"
+
+  download_hf_files "$WAN22_REPACKAGED_REPO" "$temp_dir" \
+    split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors \
+    split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors
+
+  install_named_file "$temp_dir" "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors" "$COMFY_DIR/models/loras"
+  install_named_file "$temp_dir" "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors" "$COMFY_DIR/models/loras"
+}
+
 download_ti2v_5b_models() {
   local temp_dir="$MODEL_CACHE_DIR/ti2v_5b"
   log "Downloading Wan 2.2 5B TI2V model"
@@ -239,6 +251,7 @@ Recommended starting points on an H100:
   Open wan22_14b_i2v_official.json
   Use it when you want the input image to anchor the opening frame
   Keep motion prompts specific and restrained for better coherence
+  Bundled LightX2V LoRAs are included for the common starter I2V template
 
   Open wan22_14b_flf2v_official.json
   Use it when you want explicit first-frame and last-frame control
@@ -254,6 +267,11 @@ Suggested first browser workflow:
   3. Upload a single strong source image
   4. Set conservative motion and short duration first
   5. Move to FLF2V once you want start/end frame control
+
+If a starter template complains about fp8-scaled Wan diffusion models:
+  Switch its two Wan diffusion dropdowns to:
+  - wan2.2_i2v_high_noise_14B_fp16.safetensors
+  - wan2.2_i2v_low_noise_14B_fp16.safetensors
 EOF
 }
 
@@ -300,12 +318,14 @@ main() {
   case "$MODEL_PRESET" in
     a14b_i2v)
       download_a14b_i2v_models
+      download_lightx2v_loras
       ;;
     ti2v_5b)
       download_ti2v_5b_models
       ;;
     full)
       download_a14b_i2v_models
+      download_lightx2v_loras
       download_ti2v_5b_models
       download_t2v_a14b_models
       ;;

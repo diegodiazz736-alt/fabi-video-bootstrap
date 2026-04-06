@@ -9,6 +9,7 @@ Why this is the right default:
 - Wan 2.2 A14B is explicitly positioned for image-to-video and supports **480p and 720p** generation.
 - The upstream Wan 2.2 I2V model page shows **1280x720 single-GPU inference on at least 80 GB VRAM**, which lines up well with an H100.
 - You keep closer to current ComfyUI core nodes, so fresh-machine rebuilds are less fragile than a deep stack of custom nodes.
+- The practical H100 setup benefits from putting the heavy install on a large secondary volume like `/ephemeral` when the provider ships a tiny root disk.
 
 ## What to start with
 
@@ -101,6 +102,7 @@ That is usually more dependable than trying to force the first pass to be "max r
 - clone and update ComfyUI
 - install ComfyUI-Manager
 - download the official Wan 2.2 workflow JSON files
+- download the LightX2V LoRAs used by the common Wan starter I2V template
 - download the model files needed for either:
   - `MODEL_PRESET=a14b_i2v`
   - `MODEL_PRESET=ti2v_5b`
@@ -111,6 +113,8 @@ That is usually more dependable than trying to force the first pass to be "max r
 
 - install base system packages on a fresh Linux VM
 - clone or update this repo
+- prefer `/ephemeral/comfy-wan-local` automatically when that large secondary volume exists
+- create a symlink back to `$HOME/comfy-wan-local` so the user-facing paths stay simple
 - run the Wan 2.2 ComfyUI bootstrap automatically
 - auto-detect `hf` or `huggingface-cli` for model downloads
 
@@ -132,6 +136,9 @@ Then in ComfyUI:
 - upload your reference image
 - start around `1280x720`
 - keep the first motion prompt simple
+- if a starter Wan I2V template defaults to missing fp8-scaled diffusion models, switch the two Wan diffusion dropdowns to:
+  - `wan2.2_i2v_high_noise_14B_fp16.safetensors`
+  - `wan2.2_i2v_low_noise_14B_fp16.safetensors`
 
 For first/last frame work:
 
