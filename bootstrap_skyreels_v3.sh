@@ -78,6 +78,10 @@ bootstrap_python() {
 }
 
 bootstrap_repo() {
+  local requirements_file="$REPO_DIR/requirements.txt"
+  local filtered_requirements="$INSTALL_ROOT/requirements.no_flash_attn.txt"
+  local flash_attn_spec=""
+
   log "Installing SkyReels V3 repository"
   if [[ ! -d "$REPO_DIR/.git" ]]; then
     git clone "$SKYREELS_REPO" "$REPO_DIR"
@@ -91,7 +95,15 @@ bootstrap_repo() {
   source "$VENV_DIR/bin/activate"
 
   log "Installing SkyReels Python requirements"
-  pip install -r "$REPO_DIR/requirements.txt"
+  flash_attn_spec="$(grep -E '^flash_attn([=<>!~].*)?$' "$requirements_file" | head -n 1 || true)"
+  if [[ -n "$flash_attn_spec" ]]; then
+    grep -Ev '^flash_attn([=<>!~].*)?$' "$requirements_file" >"$filtered_requirements"
+    pip install -r "$filtered_requirements"
+    log "Installing flash_attn without build isolation"
+    pip install --no-build-isolation "$flash_attn_spec"
+  else
+    pip install -r "$requirements_file"
+  fi
 }
 
 download_model() {
