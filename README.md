@@ -23,6 +23,26 @@ For multi-image character consistency and strong subject identity retention, sta
 ./bootstrap_skyreels_v3.sh
 ```
 
+On a fresh H100 box, use the one-shot installer instead:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/diegodiazz736-alt/fabi-video-bootstrap/main/install_fresh_h100.sh | bash
+```
+
+That command:
+
+- installs the basic system packages needed on a fresh machine
+- clones this repo to `$HOME/fabi-video-bootstrap`
+- runs the SkyReels bootstrap automatically
+
+If you prefer not to pipe to shell, use:
+
+```bash
+git clone https://github.com/diegodiazz736-alt/fabi-video-bootstrap.git
+cd fabi-video-bootstrap
+./install_fresh_h100.sh
+```
+
 Then run:
 
 ```bash
