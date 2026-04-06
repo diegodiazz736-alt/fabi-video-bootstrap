@@ -1,59 +1,61 @@
 # Fabi Video Generation Bootstrap
 
-Local-first bootstrap scripts and notes for running image-to-video workflows on cloud GPUs, with a current focus on strong facial identity consistency from multiple reference images.
+Local-first bootstrap scripts and notes for running image-to-video workflows on cloud GPUs, with the current main path focused on **ComfyUI + Wan 2.2** for controlled image-to-video and first/last-frame generation.
 
 ## Included
 
+- `install_fresh_wan_comfyui.sh`
+  - One-shot fresh-machine installer for the current recommended stack: ComfyUI + Wan 2.2.
+- `bootstrap_comfy_wan22.sh`
+  - Installs ComfyUI, ComfyUI-Manager, official Wan 2.2 workflow JSONs, and the model files needed for 14B I2V and FLF2V usage.
+- `wan22-comfyui-notes.md`
+  - Practical notes for controlled Wan 2.2 usage on an H100, especially I2V and first/last-frame work.
 - `bootstrap_skyreels_v3.sh`
   - Installs the official SkyReels V3 repo and local `SkyReels-V3-R2V-14B` model for multi-reference reference-to-video generation.
 - `run_skyreels_r2v.sh`
   - Small helper wrapper for running local SkyReels reference-to-video jobs.
 - `skyreels-r2v-notes.md`
   - Practical operating notes for identity-first SkyReels usage on an H100.
-- `bootstrap_comfy_wan22.sh`
-  - Earlier ComfyUI + Wan 2.2 bootstrap script kept as a fallback/general video workflow path.
-- `wan22-comfyui-notes.md`
-  - Notes for the Wan 2.2 setup.
 
 ## Recommended Path
 
-For multi-image character consistency and strong subject identity retention, start with SkyReels:
+For controlled local-first image-to-video and first/last-frame generation, start with Wan 2.2 in ComfyUI:
 
 ```bash
-./bootstrap_skyreels_v3.sh
+curl -fsSL https://raw.githubusercontent.com/diegodiazz736-alt/fabi-video-bootstrap/main/install_fresh_wan_comfyui.sh | bash
 ```
 
-On a fresh H100 box, use the one-shot installer instead:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/diegodiazz736-alt/fabi-video-bootstrap/main/install_fresh_h100.sh | bash
-```
-
-That command:
-
-- installs the basic system packages needed on a fresh machine
-- clones this repo to `$HOME/fabi-video-bootstrap`
-- runs the SkyReels bootstrap automatically
-- defaults `TORCH_CUDA_ARCH_LIST=9.0` so fresh H100 installs do not waste time building unrelated CUDA targets
-
-If you prefer not to pipe to shell, use:
+If you prefer not to pipe to shell:
 
 ```bash
 git clone https://github.com/diegodiazz736-alt/fabi-video-bootstrap.git
 cd fabi-video-bootstrap
-./install_fresh_h100.sh
+./install_fresh_wan_comfyui.sh
 ```
 
-Then run:
+Then launch ComfyUI:
 
 ```bash
-REF_IMGS="/abs/front.png,/abs/three_quarter.png,/abs/profile.png" \
-PROMPT="A cinematic close portrait. The subject makes a slight head turn and breathes naturally. Slow dolly in. Stable facial identity, natural micro-expressions, soft ambient motion." \
-$HOME/skyreels-local/run-skyreels-r2v.sh
+$HOME/comfy-wan-local/run-comfyui.sh
 ```
+
+Then in the browser:
+
+- load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_i2v_official.json` for classic image-to-video
+- load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_flf2v_official.json` for first/last-frame control
+
+## Secondary Path
+
+SkyReels remains in the repo as a secondary path for multi-reference character experiments, but it is no longer the default recommendation for constrained prompt-following work.
+
+Use it only if you specifically want:
+
+- multi-reference identity guidance
+- looser reference-to-video exploration
+- a direct CLI path rather than ComfyUI
 
 ## Notes
 
 - Everything here is intended for local execution on your own machine or rented GPU instance.
 - No external generation APIs are required.
-- The SkyReels route is currently more natural via its own inference repo than via a polished stock ComfyUI workflow.
+- The Wan 2.2 route is now the primary baseline because it offers official ComfyUI-native I2V and FLF2V workflows.

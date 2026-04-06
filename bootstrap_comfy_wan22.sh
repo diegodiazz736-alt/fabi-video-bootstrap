@@ -3,10 +3,10 @@
 set -euo pipefail
 
 # Fresh-machine bootstrap for ComfyUI + Wan 2.2 video workflows on Linux.
-# Defaults are tuned for an H100 box doing image-to-video, but a lighter TI2V
-# path is available as well.
+# Defaults are tuned for an H100 box doing image-to-video and first/last-frame
+# generation, with a lighter TI2V path available for faster iteration.
 
-INSTALL_ROOT="${INSTALL_ROOT:-$HOME/ai-video}"
+INSTALL_ROOT="${INSTALL_ROOT:-$HOME/comfy-wan-local}"
 COMFY_DIR="${COMFY_DIR:-$INSTALL_ROOT/ComfyUI}"
 VENV_DIR="${VENV_DIR:-$INSTALL_ROOT/venv}"
 WORKFLOW_DIR="${WORKFLOW_DIR:-$INSTALL_ROOT/workflows/wan22}"
@@ -14,10 +14,12 @@ MODEL_CACHE_DIR="${MODEL_CACHE_DIR:-$INSTALL_ROOT/model_cache}"
 MODEL_PRESET="${MODEL_PRESET:-a14b_i2v}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}"
-HF_BIN="${HF_BIN:-huggingface-cli}"
+HF_BIN="${HF_BIN:-}"
 COMFYUI_REF="${COMFYUI_REF:-master}"
 COMFYUI_REPO="${COMFYUI_REPO:-https://github.com/comfyanonymous/ComfyUI.git}"
 MANAGER_REPO="${MANAGER_REPO:-https://github.com/Comfy-Org/ComfyUI-Manager.git}"
+COMFY_PORT="${COMFY_PORT:-8188}"
+COMFY_HOST="${COMFY_HOST:-0.0.0.0}"
 
 WAN22_REPACKAGED_REPO="Comfy-Org/Wan_2.2_ComfyUI_Repackaged"
 WAN21_REPACKAGED_REPO="Comfy-Org/Wan_2.1_ComfyUI_repackaged"
@@ -36,6 +38,26 @@ need_cmd() {
     echo "Missing required command: $1" >&2
     exit 1
   fi
+}
+
+resolve_hf_cli() {
+  if [[ -n "$HF_BIN" ]]; then
+    need_cmd "$HF_BIN"
+    return
+  fi
+
+  if command -v hf >/dev/null 2>&1; then
+    HF_BIN="hf"
+    return
+  fi
+
+  if command -v huggingface-cli >/dev/null 2>&1; then
+    HF_BIN="huggingface-cli"
+    return
+  fi
+
+  echo "Missing Hugging Face CLI. Install huggingface_hub[cli] inside the venv first." >&2
+  exit 1
 }
 
 ensure_dir() {
@@ -90,6 +112,8 @@ bootstrap_python() {
 
   log "Installing bootstrap helpers"
   pip install --upgrade huggingface_hub[cli] ninja safetensors sentencepiece
+
+  resolve_hf_cli
 }
 
 bootstrap_comfyui() {
@@ -188,7 +212,7 @@ write_launcher() {
 set -euo pipefail
 source "$VENV_DIR/bin/activate"
 cd "$COMFY_DIR"
-exec python main.py --listen 0.0.0.0 --port 8188
+exec python main.py --listen "$COMFY_HOST" --port "$COMFY_PORT"
 EOF
   chmod +x "$launcher"
 }
@@ -202,21 +226,34 @@ ComfyUI bootstrap complete.
 Launcher:
   $INSTALL_ROOT/run-comfyui.sh
 
+ComfyUI URL after launch:
+  http://SERVER_IP:$COMFY_PORT
+
 Official workflow JSON files:
   $WORKFLOW_DIR/wan22_14b_i2v_official.json
   $WORKFLOW_DIR/wan22_5b_ti2v_official.json
   $WORKFLOW_DIR/wan22_14b_t2v_official.json
   $WORKFLOW_DIR/wan22_14b_flf2v_official.json
 
-Recommended starting point on an H100:
+Recommended starting points on an H100:
   Open wan22_14b_i2v_official.json
-  Load a reference image into the Load Image node
-  Set output size around 1280x720
+  Use it when you want the input image to anchor the opening frame
   Keep motion prompts specific and restrained for better coherence
+
+  Open wan22_14b_flf2v_official.json
+  Use it when you want explicit first-frame and last-frame control
+  The FLF2V workflow uses the same 14B I2V model files already installed here
 
 Fallback / faster path:
   Open wan22_5b_ti2v_official.json
   Use it when you want faster iteration or lower VRAM pressure
+
+Suggested first browser workflow:
+  1. Start ComfyUI with $INSTALL_ROOT/run-comfyui.sh
+  2. Open the 14B I2V workflow
+  3. Upload a single strong source image
+  4. Set conservative motion and short duration first
+  5. Move to FLF2V once you want start/end frame control
 EOF
 }
 
@@ -231,14 +268,16 @@ Supported MODEL_PRESET values:
   full       Install both presets plus the A14B text-to-video pair
 
 Optional environment variables:
-  INSTALL_ROOT   Default: \$HOME/ai-video
+  INSTALL_ROOT   Default: \$HOME/comfy-wan-local
   COMFYUI_REF    Default: master
   PYTHON_BIN     Default: python3
   TORCH_INDEX_URL Default: https://download.pytorch.org/whl/cu124
+  COMFY_PORT     Default: 8188
+  HF_BIN         Default: auto-detect hf or huggingface-cli
 
 If the Hugging Face repo requires auth in your environment:
   export HF_TOKEN=...
-  huggingface-cli login
+  hf auth login
 EOF
 }
 

@@ -1,10 +1,11 @@
-# Wan 2.2 on an H100: practical starting point
+# Wan 2.2 on an H100: practical controlled-video starting point
 
-For what you described, the strongest current starting point is the official **ComfyUI native Wan 2.2 14B I2V** workflow, not a random community graph.
+For what you described now, the strongest current starting point is the official **ComfyUI native Wan 2.2 14B I2V** workflow plus the official **Wan 2.2 14B FLF2V** workflow. That gives you both a proper start-frame-driven path and a more constrained first/last-frame path without leaving the local box.
 
 Why this is the right default:
 
 - It is the official ComfyUI image-to-video path for Wan 2.2.
+- It also has an official **first-last-frame** workflow in the same ecosystem.
 - Wan 2.2 A14B is explicitly positioned for image-to-video and supports **480p and 720p** generation.
 - The upstream Wan 2.2 I2V model page shows **1280x720 single-GPU inference on at least 80 GB VRAM**, which lines up well with an H100.
 - You keep closer to current ComfyUI core nodes, so fresh-machine rebuilds are less fragile than a deep stack of custom nodes.
@@ -15,11 +16,21 @@ Primary workflow:
 
 - `wan22_14b_i2v_official.json`
 
+Paired control workflow:
+
+- `wan22_14b_flf2v_official.json`
+
 Use this when:
 
 - you have a strong reference image
-- you want the model to preserve subject identity, framing, mood, and composition
-- you care more about quality and cohesion than raw iteration speed
+- you want the input image to act as the practical opening-frame anchor
+- you care about prompt-following and constrained motion more than multi-image lottery behavior
+
+Use FLF2V when:
+
+- you want a clear start frame and end frame
+- you want the model to solve the transition between known visual endpoints
+- you want tighter shot design than pure reference-to-video gives you
 
 Secondary workflow:
 
@@ -40,6 +51,13 @@ For best coherence from a single reference image:
 - Ask for restrained movement first: "subtle head turn", "slow dolly in", "gentle wind through fabric", "soft handheld drift".
 - Generate short clips first, then chain or upscale later.
 - Treat **720p as the native working resolution** and do final enhancement after generation if you need higher delivery resolution.
+
+For FLF2V:
+
+- Make the first and last frame agree on identity, costume, setting, and lens feel.
+- Ask the prompt to describe the motion path between the two frames, not to reinvent the whole scene.
+- Keep the transition physically plausible at first.
+- Use this mode when body shape, facial fidelity, and camera intent need firmer boundaries.
 
 ## Suggested prompt shape
 
@@ -74,7 +92,7 @@ On current open workflows, the reliable pattern is usually:
 
 That is usually more dependable than trying to force the first pass to be "max resolution everything".
 
-## What the bootstrap script does
+## What the bootstrap scripts do
 
 `bootstrap_comfy_wan22.sh` will:
 
@@ -89,25 +107,38 @@ That is usually more dependable than trying to force the first pass to be "max r
   - `MODEL_PRESET=full`
 - write a `run-comfyui.sh` launcher
 
+`install_fresh_wan_comfyui.sh` will:
+
+- install base system packages on a fresh Linux VM
+- clone or update this repo
+- run the Wan 2.2 ComfyUI bootstrap automatically
+- auto-detect `hf` or `huggingface-cli` for model downloads
+
 ## Recommended first run
 
 ```bash
-chmod +x /Users/duncangreen/Documents/Fabi/bootstrap_comfy_wan22.sh
-MODEL_PRESET=a14b_i2v /Users/duncangreen/Documents/Fabi/bootstrap_comfy_wan22.sh
+curl -fsSL https://raw.githubusercontent.com/diegodiazz736-alt/fabi-video-bootstrap/main/install_fresh_wan_comfyui.sh | bash
 ```
 
 Then on the server:
 
 ```bash
-$HOME/ai-video/run-comfyui.sh
+$HOME/comfy-wan-local/run-comfyui.sh
 ```
 
 Then in ComfyUI:
 
-- load `$HOME/ai-video/workflows/wan22/wan22_14b_i2v_official.json`
+- load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_i2v_official.json`
 - upload your reference image
 - start around `1280x720`
 - keep the first motion prompt simple
+
+For first/last frame work:
+
+- load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_flf2v_official.json`
+- upload a start image and an end image
+- start at conservative resolution and short duration
+- use prompt text to describe the transition, not unrelated scene changes
 
 ## Sources
 
