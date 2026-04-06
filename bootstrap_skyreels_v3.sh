@@ -145,6 +145,29 @@ if changed:
     path.write_text(text)
 PY
 
+  log "Patching SkyReels reference pipeline for negative prompt support"
+  "$PYTHON_BIN" - <<'PY' "$REPO_DIR/skyreels_v3/pipelines/reference_to_video_pipeline.py"
+from pathlib import Path
+import sys
+
+path = Path(sys.argv[1])
+text = path.read_text()
+
+sig_old = '    def generate_video(self, ref_imgs, prompt, duration, seed, resolution="720P"):\n'
+sig_new = '    def generate_video(self, ref_imgs, prompt, duration, seed, resolution="720P", negative_prompt=""):\n'
+
+if sig_old in text:
+    text = text.replace(sig_old, sig_new, 1)
+
+kwargs_old = '            "negative_prompt": "",\n'
+kwargs_new = '            "negative_prompt": negative_prompt,\n'
+
+if kwargs_old in text:
+    text = text.replace(kwargs_old, kwargs_new, 1)
+
+path.write_text(text)
+PY
+
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
 
