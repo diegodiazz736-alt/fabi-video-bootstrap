@@ -75,6 +75,9 @@ bootstrap_python() {
 
   log "Installing Hugging Face CLI"
   pip install --upgrade "huggingface_hub[cli]"
+
+  log "Installing media runtime dependencies used by SkyReels"
+  pip install --upgrade av
 }
 
 bootstrap_repo() {
