@@ -85,6 +85,7 @@ stable facial identity, coherent anatomy, natural motion
 - create a Python venv
 - install CUDA PyTorch and the SkyReels repo requirements
 - clone and update the official SkyReels V3 repo
+- default `TORCH_CUDA_ARCH_LIST` to `9.0` for H100-targeted `flash_attn` builds
 - optionally preload the `Skywork/SkyReels-V3-R2V-14B` model locally
 - write a `run-skyreels-r2v.sh` helper on the remote machine
 - write a prompt template and quick-start note

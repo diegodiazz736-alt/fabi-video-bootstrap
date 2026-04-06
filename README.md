@@ -34,6 +34,7 @@ That command:
 - installs the basic system packages needed on a fresh machine
 - clones this repo to `$HOME/fabi-video-bootstrap`
 - runs the SkyReels bootstrap automatically
+- defaults `TORCH_CUDA_ARCH_LIST=9.0` so fresh H100 installs do not waste time building unrelated CUDA targets
 
 If you prefer not to pipe to shell, use:
 

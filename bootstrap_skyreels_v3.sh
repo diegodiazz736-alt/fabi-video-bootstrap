@@ -19,6 +19,7 @@ SKYREELS_REPO="${SKYREELS_REPO:-https://github.com/SkyworkAI/SkyReels-V3.git}"
 SKYREELS_REF="${SKYREELS_REF:-main}"
 SKYREELS_MODEL_ID="${SKYREELS_MODEL_ID:-Skywork/SkyReels-V3-R2V-14B}"
 PRELOAD_MODEL="${PRELOAD_MODEL:-1}"
+TORCH_CUDA_ARCH_LIST="${TORCH_CUDA_ARCH_LIST:-9.0}"
 
 log() {
   printf '\n[%s] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
@@ -96,6 +97,8 @@ bootstrap_repo() {
 
   # shellcheck disable=SC1091
   source "$VENV_DIR/bin/activate"
+
+  export TORCH_CUDA_ARCH_LIST
 
   log "Installing SkyReels Python requirements"
   flash_attn_spec="$(grep -E '^flash_attn([=<>!~].*)?$' "$requirements_file" | head -n 1 || true)"
@@ -282,6 +285,7 @@ Optional environment variables:
   PRELOAD_MODEL     Default: 1
   PYTHON_BIN        Default: python3
   TORCH_INDEX_URL   Default: https://download.pytorch.org/whl/cu128
+  TORCH_CUDA_ARCH_LIST Default: 9.0
 
 If your Hugging Face environment requires auth:
   export HF_TOKEN=...
