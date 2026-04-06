@@ -13,7 +13,7 @@ INPUT_DIR="${INPUT_DIR:-$INSTALL_ROOT/inputs}"
 OUTPUT_DIR="${OUTPUT_DIR:-$INSTALL_ROOT/outputs}"
 PROMPT_DIR="${PROMPT_DIR:-$INSTALL_ROOT/prompts}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-HF_BIN="${HF_BIN:-huggingface-cli}"
+HF_BIN="${HF_BIN:-}"
 TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu128}"
 SKYREELS_REPO="${SKYREELS_REPO:-https://github.com/SkyworkAI/SkyReels-V3.git}"
 SKYREELS_REF="${SKYREELS_REF:-main}"
@@ -33,6 +33,25 @@ need_cmd() {
 
 ensure_dir() {
   mkdir -p "$1"
+}
+
+resolve_hf_bin() {
+  if [[ -n "$HF_BIN" ]] && command -v "$HF_BIN" >/dev/null 2>&1; then
+    return
+  fi
+
+  if command -v hf >/dev/null 2>&1; then
+    HF_BIN="hf"
+    return
+  fi
+
+  if command -v huggingface-cli >/dev/null 2>&1; then
+    HF_BIN="huggingface-cli"
+    return
+  fi
+
+  echo "Unable to find a Hugging Face CLI command (expected 'hf' or 'huggingface-cli')." >&2
+  exit 1
 }
 
 bootstrap_python() {
@@ -251,7 +270,7 @@ Optional environment variables:
 
 If your Hugging Face environment requires auth:
   export HF_TOKEN=...
-  huggingface-cli login
+  hf auth login
 EOF
 }
 
@@ -268,7 +287,7 @@ main() {
   ensure_dir "$OUTPUT_DIR"
 
   bootstrap_python
-  need_cmd "$HF_BIN"
+  resolve_hf_bin
   bootstrap_repo
   download_model
   write_runner
