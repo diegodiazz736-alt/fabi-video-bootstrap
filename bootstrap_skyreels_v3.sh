@@ -263,12 +263,12 @@ main() {
 
   need_cmd git
   need_cmd "$PYTHON_BIN"
-  need_cmd "$HF_BIN"
 
   ensure_dir "$INPUT_DIR"
   ensure_dir "$OUTPUT_DIR"
 
   bootstrap_python
+  need_cmd "$HF_BIN"
   bootstrap_repo
   download_model
   write_runner
