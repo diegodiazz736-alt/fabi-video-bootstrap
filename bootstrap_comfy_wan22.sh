@@ -18,8 +18,16 @@ HF_BIN="${HF_BIN:-}"
 COMFYUI_REF="${COMFYUI_REF:-master}"
 COMFYUI_REPO="${COMFYUI_REPO:-https://github.com/comfyanonymous/ComfyUI.git}"
 MANAGER_REPO="${MANAGER_REPO:-https://github.com/Comfy-Org/ComfyUI-Manager.git}"
+WANVIDEO_WRAPPER_REPO="${WANVIDEO_WRAPPER_REPO:-https://github.com/kijai/ComfyUI-WanVideoWrapper.git}"
+STANDIN_PREPROCESSOR_REPO="${STANDIN_PREPROCESSOR_REPO:-https://github.com/WeChatCV/Stand-In_Preprocessor_ComfyUI.git}"
 COMFY_PORT="${COMFY_PORT:-8188}"
 COMFY_HOST="${COMFY_HOST:-0.0.0.0}"
+INSTALL_WANVIDEO_WRAPPER="${INSTALL_WANVIDEO_WRAPPER:-false}"
+INSTALL_STANDIN="${INSTALL_STANDIN:-false}"
+INSTALL_NSFW_LORAS="${INSTALL_NSFW_LORAS:-false}"
+STANDIN_WEIGHTS_REPO="${STANDIN_WEIGHTS_REPO:-Kijai/WanVideo_comfy}"
+NSFW_LORA_REPO="${NSFW_LORA_REPO:-}"
+NSFW_LORA_FILES="${NSFW_LORA_FILES:-}"
 
 WAN22_REPACKAGED_REPO="Comfy-Org/Wan_2.2_ComfyUI_Repackaged"
 WAN21_REPACKAGED_REPO="Comfy-Org/Wan_2.1_ComfyUI_repackaged"
@@ -64,6 +72,13 @@ ensure_dir() {
   mkdir -p "$1"
 }
 
+bool_true() {
+  case "${1,,}" in
+    1|true|yes|on) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 download_hf_files() {
   local repo="$1"
   local target_dir="$2"
@@ -86,6 +101,19 @@ install_named_file() {
   fi
 
   cp -f "$found" "$dest_dir/$filename"
+}
+
+clone_or_update_repo_dir() {
+  local repo_url="$1"
+  local dest_dir="$2"
+
+  if [[ ! -d "$dest_dir/.git" ]]; then
+    git clone "$repo_url" "$dest_dir"
+    return
+  fi
+
+  git -C "$dest_dir" fetch --all --tags
+  git -C "$dest_dir" pull --ff-only
 }
 
 download_workflow() {
@@ -144,6 +172,27 @@ bootstrap_comfyui() {
   fi
 }
 
+bootstrap_optional_custom_nodes() {
+  # shellcheck disable=SC1091
+  source "$VENV_DIR/bin/activate"
+
+  if bool_true "$INSTALL_WANVIDEO_WRAPPER" || bool_true "$INSTALL_STANDIN"; then
+    log "Installing ComfyUI-WanVideoWrapper"
+    clone_or_update_repo_dir "$WANVIDEO_WRAPPER_REPO" "$COMFY_DIR/custom_nodes/ComfyUI-WanVideoWrapper"
+    if [[ -f "$COMFY_DIR/custom_nodes/ComfyUI-WanVideoWrapper/requirements.txt" ]]; then
+      pip install -r "$COMFY_DIR/custom_nodes/ComfyUI-WanVideoWrapper/requirements.txt"
+    fi
+  fi
+
+  if bool_true "$INSTALL_STANDIN"; then
+    log "Installing Stand-In official preprocessor nodes"
+    clone_or_update_repo_dir "$STANDIN_PREPROCESSOR_REPO" "$COMFY_DIR/custom_nodes/Stand-In_Preprocessor_ComfyUI"
+    if [[ -f "$COMFY_DIR/custom_nodes/Stand-In_Preprocessor_ComfyUI/requirements.txt" ]]; then
+      pip install -r "$COMFY_DIR/custom_nodes/Stand-In_Preprocessor_ComfyUI/requirements.txt"
+    fi
+  fi
+}
+
 download_common_models() {
   local temp_dir="$MODEL_CACHE_DIR/common"
   log "Downloading shared Wan text encoder and VAE files"
@@ -182,6 +231,36 @@ download_lightx2v_loras() {
 
   install_named_file "$temp_dir" "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors" "$COMFY_DIR/models/loras"
   install_named_file "$temp_dir" "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors" "$COMFY_DIR/models/loras"
+}
+
+download_standin_weights() {
+  local temp_dir="$MODEL_CACHE_DIR/standin"
+  log "Downloading Stand-In weights for WanVideoWrapper"
+
+  download_hf_files "$STANDIN_WEIGHTS_REPO" "$temp_dir" \
+    LoRAs/Stand-In/Stand-In_wan2.2_T2V_A14B_HIGH_fp16.safetensors \
+    LoRAs/Stand-In/Stand-In_wan2.2_T2V_A14B_LOW_fp16.safetensors
+
+  install_named_file "$temp_dir" "Stand-In_wan2.2_T2V_A14B_HIGH_fp16.safetensors" "$COMFY_DIR/models/loras"
+  install_named_file "$temp_dir" "Stand-In_wan2.2_T2V_A14B_LOW_fp16.safetensors" "$COMFY_DIR/models/loras"
+}
+
+download_nsfw_loras() {
+  local temp_dir="$MODEL_CACHE_DIR/nsfw_loras"
+  local file
+
+  if [[ -z "$NSFW_LORA_REPO" || -z "$NSFW_LORA_FILES" ]]; then
+    echo "INSTALL_NSFW_LORAS=true requires NSFW_LORA_REPO and NSFW_LORA_FILES." >&2
+    exit 1
+  fi
+
+  log "Downloading community NSFW LoRAs"
+  IFS=',' read -r -a files <<< "$NSFW_LORA_FILES"
+  download_hf_files "$NSFW_LORA_REPO" "$temp_dir" "${files[@]}"
+
+  for file in "${files[@]}"; do
+    install_named_file "$temp_dir" "$(basename "$file")" "$COMFY_DIR/models/loras"
+  done
 }
 
 download_ti2v_5b_models() {
@@ -257,6 +336,11 @@ Recommended starting points on an H100:
   Use it when you want explicit first-frame and last-frame control
   The FLF2V workflow uses the same 14B I2V model files already installed here
 
+Optional advanced add-ons:
+  INSTALL_WANVIDEO_WRAPPER=true enables the wrapper stack for newer experimental Wan workflows
+  INSTALL_STANDIN=true adds the official Stand-In preprocessor and Wan 2.2 Stand-In weights
+  INSTALL_NSFW_LORAS=true lets you pull community LoRAs into models/loras when you provide the repo and files
+
 Fallback / faster path:
   Open wan22_5b_ti2v_official.json
   Use it when you want faster iteration or lower VRAM pressure
@@ -292,6 +376,11 @@ Optional environment variables:
   TORCH_INDEX_URL Default: https://download.pytorch.org/whl/cu124
   COMFY_PORT     Default: 8188
   HF_BIN         Default: auto-detect hf or huggingface-cli
+  INSTALL_WANVIDEO_WRAPPER Default: false
+  INSTALL_STANDIN Default: false
+  INSTALL_NSFW_LORAS Default: false
+  NSFW_LORA_REPO  Example: wiikoo/WAN-LORA
+  NSFW_LORA_FILES Comma-separated repo paths like wan2.2/NSFW-22-H-e8.safetensors
 
 If the Hugging Face repo requires auth in your environment:
   export HF_TOKEN=...
@@ -312,6 +401,7 @@ main() {
 
   bootstrap_python
   bootstrap_comfyui
+  bootstrap_optional_custom_nodes
   download_common_models
   download_workflows
 
@@ -319,15 +409,24 @@ main() {
     a14b_i2v)
       download_a14b_i2v_models
       download_lightx2v_loras
+      if bool_true "$INSTALL_STANDIN"; then
+        download_standin_weights
+      fi
       ;;
     ti2v_5b)
       download_ti2v_5b_models
+      if bool_true "$INSTALL_STANDIN"; then
+        download_standin_weights
+      fi
       ;;
     full)
       download_a14b_i2v_models
       download_lightx2v_loras
       download_ti2v_5b_models
       download_t2v_a14b_models
+      if bool_true "$INSTALL_STANDIN"; then
+        download_standin_weights
+      fi
       ;;
     *)
       echo "Unsupported MODEL_PRESET: $MODEL_PRESET" >&2
@@ -335,6 +434,10 @@ main() {
       exit 1
       ;;
   esac
+
+  if bool_true "$INSTALL_NSFW_LORAS"; then
+    download_nsfw_loras
+  fi
 
   write_launcher
   write_notes

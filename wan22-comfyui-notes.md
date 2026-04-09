@@ -2,6 +2,14 @@
 
 For what you described now, the strongest current starting point is the official **ComfyUI native Wan 2.2 14B I2V** workflow plus the official **Wan 2.2 14B FLF2V** workflow. That gives you both a proper start-frame-driven path and a more constrained first/last-frame path without leaving the local box.
 
+For stronger identity locking from the first frame, there is now also a practical optional path:
+
+- `WanVideoWrapper`
+- the official `Stand-In_Preprocessor_ComfyUI`
+- Wan 2.2 `Stand-In` weights
+
+That path is more experimental than native Wan and is best treated as an add-on rather than the baseline.
+
 Why this is the right default:
 
 - It is the official ComfyUI image-to-video path for Wan 2.2.
@@ -108,6 +116,10 @@ That is usually more dependable than trying to force the first pass to be "max r
   - `MODEL_PRESET=ti2v_5b`
   - `MODEL_PRESET=full`
 - write a `run-comfyui.sh` launcher
+- optionally install `WanVideoWrapper`
+- optionally install the official `Stand-In_Preprocessor_ComfyUI`
+- optionally download Wan 2.2 `Stand-In` weights
+- optionally download community NSFW LoRAs you specify via environment variables
 
 `install_fresh_wan_comfyui.sh` will:
 
@@ -117,6 +129,7 @@ That is usually more dependable than trying to force the first pass to be "max r
 - create a symlink back to `$HOME/comfy-wan-local` so the user-facing paths stay simple
 - run the Wan 2.2 ComfyUI bootstrap automatically
 - auto-detect `hf` or `huggingface-cli` for model downloads
+- pass through optional flags for `WanVideoWrapper`, `Stand-In`, and community NSFW LoRAs
 
 ## Recommended first run
 
@@ -147,6 +160,32 @@ For first/last frame work:
 - start at conservative resolution and short duration
 - use prompt text to describe the transition, not unrelated scene changes
 
+## Optional add-ons
+
+Stand-In path:
+
+- install with `INSTALL_WANVIDEO_WRAPPER=true INSTALL_STANDIN=true`
+- this adds the custom node stack needed for current ComfyUI Stand-In usage
+- it also pulls the Wan 2.2 Stand-In weights from `Kijai/WanVideo_comfy`
+- the official Stand-In team currently recommends using their preprocessor node inside ComfyUI for better results than the wrapper-only preprocessing
+
+Community NSFW LoRAs:
+
+- install with `INSTALL_NSFW_LORAS=true`
+- specify:
+  - `NSFW_LORA_REPO`
+  - `NSFW_LORA_FILES`
+- example:
+
+```bash
+INSTALL_NSFW_LORAS=true \
+NSFW_LORA_REPO="wiikoo/WAN-LORA" \
+NSFW_LORA_FILES="wan2.2/NSFW-22-H-e8.safetensors" \
+./install_fresh_wan_comfyui.sh
+```
+
+Treat these as experimental community add-ons, not official Wan components.
+
 ## Sources
 
 - ComfyUI Wan 2.2 native workflows:
@@ -155,3 +194,9 @@ For first/last frame work:
   [github.com/Comfy-Org/ComfyUI-Manager](https://github.com/Comfy-Org/ComfyUI-Manager)
 - Wan 2.2 I2V model page:
   [huggingface.co/Wan-AI/Wan2.2-I2V-A14B](https://huggingface.co/Wan-AI/Wan2.2-I2V-A14B)
+- WanVideoWrapper:
+  [github.com/kijai/ComfyUI-WanVideoWrapper](https://github.com/kijai/ComfyUI-WanVideoWrapper)
+- Stand-In:
+  [github.com/WeChatCV/Stand-In](https://github.com/WeChatCV/Stand-In)
+- Stand-In official preprocessor node:
+  [github.com/WeChatCV/Stand-In_Preprocessor_ComfyUI](https://github.com/WeChatCV/Stand-In_Preprocessor_ComfyUI)
