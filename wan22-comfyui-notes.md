@@ -119,6 +119,7 @@ That is usually more dependable than trying to force the first pass to be "max r
 - optionally install `WanVideoWrapper`
 - optionally install the official `Stand-In_Preprocessor_ComfyUI`
 - optionally download Wan 2.2 `Stand-In` weights
+- optionally download facial expression LoRAs, defaulting to `wan22-face-naturalizer.safetensors`
 - optionally download community NSFW LoRAs you specify via environment variables
 
 `install_fresh_wan_comfyui.sh` will:
@@ -130,6 +131,7 @@ That is usually more dependable than trying to force the first pass to be "max r
 - run the Wan 2.2 ComfyUI bootstrap automatically
 - auto-detect `hf` or `huggingface-cli` for model downloads
 - pass through optional flags for `WanVideoWrapper`, `Stand-In`, and community NSFW LoRAs
+- pass through optional facial expression LoRA settings
 
 ## Recommended first run
 
@@ -186,6 +188,20 @@ NSFW_LORA_FILES="wan2.2/NSFW-22-H-e8.safetensors" \
 
 Treat these as experimental community add-ons, not official Wan components.
 
+Facial expression LoRAs:
+
+- install with `INSTALL_EXPRESSION_LORAS=true`
+- the default is `wan22-face-naturalizer.safetensors` from `wangkanai/wan22-fp16-i2v-loras`
+- the same collection also includes `wan22-action-wink-i2v-v1-low.safetensors` for a more specific wink/action test
+- to install both:
+
+```bash
+INSTALL_EXPRESSION_LORAS=true \
+EXPRESSION_LORA_REPO="wangkanai/wan22-fp16-i2v-loras" \
+EXPRESSION_LORA_FILES="loras/wan/wan22-face-naturalizer.safetensors,loras/wan/wan22-action-wink-i2v-v1-low.safetensors" \
+./install_fresh_wan_comfyui.sh
+```
+
 ## Sources
 
 - ComfyUI Wan 2.2 native workflows:
@@ -200,3 +216,5 @@ Treat these as experimental community add-ons, not official Wan components.
   [github.com/WeChatCV/Stand-In](https://github.com/WeChatCV/Stand-In)
 - Stand-In official preprocessor node:
   [github.com/WeChatCV/Stand-In_Preprocessor_ComfyUI](https://github.com/WeChatCV/Stand-In_Preprocessor_ComfyUI)
+- Wan 2.2 FP16 I2V expression LoRA collection:
+  [huggingface.co/wangkanai/wan22-fp16-i2v-loras](https://huggingface.co/wangkanai/wan22-fp16-i2v-loras)

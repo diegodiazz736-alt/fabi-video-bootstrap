@@ -8,7 +8,7 @@ Local-first bootstrap scripts and notes for running image-to-video workflows on 
   - One-shot fresh-machine installer for the current recommended stack: ComfyUI + Wan 2.2.
 - `bootstrap_comfy_wan22.sh`
   - Installs ComfyUI, ComfyUI-Manager, official Wan 2.2 workflow JSONs, the 14B I2V and FLF2V model files, and the LightX2V LoRAs used by the common starter I2V template.
-  - Can optionally add `WanVideoWrapper`, the official `Stand-In` preprocessor, Wan 2.2 Stand-In weights, and community NSFW LoRAs.
+  - Can optionally add `WanVideoWrapper`, the official `Stand-In` preprocessor, Wan 2.2 Stand-In weights, facial expression LoRAs, and other community LoRAs.
 - `wan22-comfyui-notes.md`
   - Practical notes for controlled Wan 2.2 usage on an H100, especially I2V and first/last-frame work.
 - `bootstrap_skyreels_v3.sh`
@@ -51,6 +51,26 @@ Optional add-on install:
 ```bash
 INSTALL_WANVIDEO_WRAPPER=true \
 INSTALL_STANDIN=true \
+INSTALL_EXPRESSION_LORAS=true \
+./install_fresh_wan_comfyui.sh
+```
+
+The default expression LoRA is:
+
+- `wan22-face-naturalizer.safetensors`
+
+To override the expression LoRA source:
+
+```bash
+INSTALL_EXPRESSION_LORAS=true \
+EXPRESSION_LORA_REPO="wangkanai/wan22-fp16-i2v-loras" \
+EXPRESSION_LORA_FILES="loras/wan/wan22-face-naturalizer.safetensors,loras/wan/wan22-action-wink-i2v-v1-low.safetensors" \
+./install_fresh_wan_comfyui.sh
+```
+
+Other community LoRAs can be installed with:
+
+```bash
 INSTALL_NSFW_LORAS=true \
 NSFW_LORA_REPO="wiikoo/WAN-LORA" \
 NSFW_LORA_FILES="wan2.2/NSFW-22-H-e8.safetensors" \

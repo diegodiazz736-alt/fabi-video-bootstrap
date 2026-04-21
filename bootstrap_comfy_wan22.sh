@@ -24,8 +24,11 @@ COMFY_PORT="${COMFY_PORT:-8188}"
 COMFY_HOST="${COMFY_HOST:-0.0.0.0}"
 INSTALL_WANVIDEO_WRAPPER="${INSTALL_WANVIDEO_WRAPPER:-false}"
 INSTALL_STANDIN="${INSTALL_STANDIN:-false}"
+INSTALL_EXPRESSION_LORAS="${INSTALL_EXPRESSION_LORAS:-false}"
 INSTALL_NSFW_LORAS="${INSTALL_NSFW_LORAS:-false}"
 STANDIN_WEIGHTS_REPO="${STANDIN_WEIGHTS_REPO:-Kijai/WanVideo_comfy}"
+EXPRESSION_LORA_REPO="${EXPRESSION_LORA_REPO:-wangkanai/wan22-fp16-i2v-loras}"
+EXPRESSION_LORA_FILES="${EXPRESSION_LORA_FILES:-loras/wan/wan22-face-naturalizer.safetensors}"
 NSFW_LORA_REPO="${NSFW_LORA_REPO:-}"
 NSFW_LORA_FILES="${NSFW_LORA_FILES:-}"
 
@@ -263,6 +266,24 @@ download_nsfw_loras() {
   done
 }
 
+download_expression_loras() {
+  local temp_dir="$MODEL_CACHE_DIR/expression_loras"
+  local file
+
+  if [[ -z "$EXPRESSION_LORA_REPO" || -z "$EXPRESSION_LORA_FILES" ]]; then
+    echo "INSTALL_EXPRESSION_LORAS=true requires EXPRESSION_LORA_REPO and EXPRESSION_LORA_FILES." >&2
+    exit 1
+  fi
+
+  log "Downloading facial expression LoRAs"
+  IFS=',' read -r -a files <<< "$EXPRESSION_LORA_FILES"
+  download_hf_files "$EXPRESSION_LORA_REPO" "$temp_dir" "${files[@]}"
+
+  for file in "${files[@]}"; do
+    install_named_file "$temp_dir" "$(basename "$file")" "$COMFY_DIR/models/loras"
+  done
+}
+
 download_ti2v_5b_models() {
   local temp_dir="$MODEL_CACHE_DIR/ti2v_5b"
   log "Downloading Wan 2.2 5B TI2V model"
@@ -339,6 +360,7 @@ Recommended starting points on an H100:
 Optional advanced add-ons:
   INSTALL_WANVIDEO_WRAPPER=true enables the wrapper stack for newer experimental Wan workflows
   INSTALL_STANDIN=true adds the official Stand-In preprocessor and Wan 2.2 Stand-In weights
+  INSTALL_EXPRESSION_LORAS=true adds facial expression LoRAs such as wan22-face-naturalizer
   INSTALL_NSFW_LORAS=true lets you pull community LoRAs into models/loras when you provide the repo and files
 
 Fallback / faster path:
@@ -378,6 +400,9 @@ Optional environment variables:
   HF_BIN         Default: auto-detect hf or huggingface-cli
   INSTALL_WANVIDEO_WRAPPER Default: false
   INSTALL_STANDIN Default: false
+  INSTALL_EXPRESSION_LORAS Default: false
+  EXPRESSION_LORA_REPO Default: wangkanai/wan22-fp16-i2v-loras
+  EXPRESSION_LORA_FILES Default: loras/wan/wan22-face-naturalizer.safetensors
   INSTALL_NSFW_LORAS Default: false
   NSFW_LORA_REPO  Example: wiikoo/WAN-LORA
   NSFW_LORA_FILES Comma-separated repo paths like wan2.2/NSFW-22-H-e8.safetensors
@@ -437,6 +462,10 @@ main() {
 
   if bool_true "$INSTALL_NSFW_LORAS"; then
     download_nsfw_loras
+  fi
+
+  if bool_true "$INSTALL_EXPRESSION_LORAS"; then
+    download_expression_loras
   fi
 
   write_launcher
