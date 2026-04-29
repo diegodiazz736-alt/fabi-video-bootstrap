@@ -8,7 +8,7 @@ Local-first bootstrap scripts and notes for running image-to-video workflows on 
   - One-shot fresh-machine installer for the current recommended stack: ComfyUI + Wan 2.2.
 - `bootstrap_comfy_wan22.sh`
   - Installs ComfyUI, ComfyUI-Manager, official Wan 2.2 workflow JSONs, the 14B I2V and FLF2V model files, and the LightX2V LoRAs used by the common starter I2V template.
-  - Can optionally add `WanVideoWrapper`, the official `Stand-In` preprocessor, Wan 2.2 Stand-In weights, facial expression LoRAs, and other community LoRAs.
+  - Can optionally add `WanVideoWrapper`, the official `Stand-In` preprocessor, Wan 2.2 Stand-In weights, a working `ComfyUI_IPAdapter_plus` FaceID stack, facial expression LoRAs, and other community LoRAs.
 - `wan22-comfyui-notes.md`
   - Practical notes for controlled Wan 2.2 usage on an H100, especially I2V and first/last-frame work.
 - `community_workflows/`
@@ -46,18 +46,21 @@ Then in the browser:
 
 - load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_i2v_official.json` for classic image-to-video
 - load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_flf2v_official.json` for first/last-frame control
-- load `$HOME/comfy-wan-local/workflows/community/ip-adapter-faceid-sdxl.json` for single-face identity preservation in a new still-image scene
-- load `$HOME/comfy-wan-local/workflows/community/simple-instantid-workflow.json` for a stronger single-face identity lock path
+- if you install `INSTALL_IPADAPTER_FACEID=true`, use the built-in template browser and open `ipadapter_faceid` for single-face identity preservation in a new still-image scene
+- the bundled community workflow JSONs are still copied into `$HOME/comfy-wan-local/workflows/community/`, but the built-in `ipadapter_faceid` template is the working current path
 - if a starter template expects fp8-scaled Wan diffusion models, switch its two Wan diffusion dropdowns to the installed fp16 pair instead of downloading extra copies immediately
 
 Optional add-on install:
 
 ```bash
+INSTALL_IPADAPTER_FACEID=true \
 INSTALL_WANVIDEO_WRAPPER=true \
 INSTALL_STANDIN=true \
 INSTALL_EXPRESSION_LORAS=true \
 ./install_fresh_wan_comfyui.sh
 ```
+
+This also helps on newer Blackwell boxes because the bootstrap now defaults to newer CUDA PyTorch wheels (`cu128`) instead of the older H100-only friendly `cu124` path.
 
 The default expression LoRA is:
 
@@ -99,4 +102,5 @@ Use it only if you specifically want:
 - On providers with a small root disk and a large secondary volume, `install_fresh_wan_comfyui.sh` now prefers `/ephemeral/comfy-wan-local` and symlinks back to `$HOME/comfy-wan-local`.
 - `Stand-In` currently means the `WanVideoWrapper` path plus the official `Stand-In_Preprocessor_ComfyUI` node, not the pure native Wan core nodes.
 - The bundled `community_workflows` are intentionally preserved in the repo so future cloud machines get the same starting JSONs every time.
+- `ComfyUI_IPAdapter_plus` changed substantially over time, so older FaceID JSONs can be stale even when the node pack is installed. Prefer the built-in `ipadapter_faceid` template when using the optional FaceID install path.
 - Community NSFW LoRAs are not official Wan releases, so they are handled as opt-in extras rather than default dependencies.

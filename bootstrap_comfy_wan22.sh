@@ -17,7 +17,7 @@ COMMUNITY_WORKFLOW_INSTALL_DIR="${COMMUNITY_WORKFLOW_INSTALL_DIR:-$INSTALL_ROOT/
 MODEL_CACHE_DIR="${MODEL_CACHE_DIR:-$INSTALL_ROOT/model_cache}"
 MODEL_PRESET="${MODEL_PRESET:-a14b_i2v}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
-TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu124}"
+TORCH_INDEX_URL="${TORCH_INDEX_URL:-https://download.pytorch.org/whl/cu128}"
 HF_BIN="${HF_BIN:-}"
 COMFYUI_REF="${COMFYUI_REF:-master}"
 COMFYUI_REPO="${COMFYUI_REPO:-https://github.com/comfyanonymous/ComfyUI.git}"
@@ -28,6 +28,7 @@ COMFY_PORT="${COMFY_PORT:-8188}"
 COMFY_HOST="${COMFY_HOST:-0.0.0.0}"
 INSTALL_WANVIDEO_WRAPPER="${INSTALL_WANVIDEO_WRAPPER:-false}"
 INSTALL_STANDIN="${INSTALL_STANDIN:-false}"
+INSTALL_IPADAPTER_FACEID="${INSTALL_IPADAPTER_FACEID:-false}"
 INSTALL_EXPRESSION_LORAS="${INSTALL_EXPRESSION_LORAS:-false}"
 INSTALL_NSFW_LORAS="${INSTALL_NSFW_LORAS:-false}"
 STANDIN_WEIGHTS_REPO="${STANDIN_WEIGHTS_REPO:-Kijai/WanVideo_comfy}"
@@ -35,9 +36,13 @@ EXPRESSION_LORA_REPO="${EXPRESSION_LORA_REPO:-wangkanai/wan22-fp16-i2v-loras}"
 EXPRESSION_LORA_FILES="${EXPRESSION_LORA_FILES:-loras/wan/wan22-face-naturalizer.safetensors}"
 NSFW_LORA_REPO="${NSFW_LORA_REPO:-}"
 NSFW_LORA_FILES="${NSFW_LORA_FILES:-}"
+IPADAPTER_REPO="${IPADAPTER_REPO:-https://github.com/cubiq/ComfyUI_IPAdapter_plus.git}"
 
 WAN22_REPACKAGED_REPO="Comfy-Org/Wan_2.2_ComfyUI_Repackaged"
 WAN21_REPACKAGED_REPO="Comfy-Org/Wan_2.1_ComfyUI_repackaged"
+IPADAPTER_CLIP_REPO="h94/IP-Adapter"
+IPADAPTER_FACEID_REPO="h94/IP-Adapter-FaceID"
+REALISTIC_VISION_REPO="MochaPixel/RealisticVision"
 
 WORKFLOW_5B_TI2V_URL="https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/video_wan2_2_5B_ti2v.json"
 WORKFLOW_14B_I2V_URL="https://raw.githubusercontent.com/Comfy-Org/workflow_templates/refs/heads/main/templates/video_wan2_2_14B_i2v.json"
@@ -198,6 +203,17 @@ bootstrap_optional_custom_nodes() {
       pip install -r "$COMFY_DIR/custom_nodes/Stand-In_Preprocessor_ComfyUI/requirements.txt"
     fi
   fi
+
+  if bool_true "$INSTALL_IPADAPTER_FACEID"; then
+    log "Installing ComfyUI_IPAdapter_plus"
+    clone_or_update_repo_dir "$IPADAPTER_REPO" "$COMFY_DIR/custom_nodes/ComfyUI_IPAdapter_plus"
+    if [[ -f "$COMFY_DIR/custom_nodes/ComfyUI_IPAdapter_plus/requirements.txt" ]]; then
+      pip install -r "$COMFY_DIR/custom_nodes/ComfyUI_IPAdapter_plus/requirements.txt"
+    fi
+
+    log "Installing FaceID runtime dependencies"
+    pip install --upgrade insightface onnxruntime
+  fi
 }
 
 download_common_models() {
@@ -250,6 +266,34 @@ download_standin_weights() {
 
   install_named_file "$temp_dir" "Stand-In_wan2.2_T2V_A14B_HIGH_fp16.safetensors" "$COMFY_DIR/models/loras"
   install_named_file "$temp_dir" "Stand-In_wan2.2_T2V_A14B_LOW_fp16.safetensors" "$COMFY_DIR/models/loras"
+}
+
+download_ipadapter_faceid_assets() {
+  local temp_dir="$MODEL_CACHE_DIR/ipadapter_faceid"
+  log "Downloading IPAdapter FaceID assets for the built-in ipadapter_faceid template"
+
+  download_hf_files "$IPADAPTER_CLIP_REPO" "$temp_dir/clip" \
+    models/image_encoder/model.safetensors
+  install_named_file "$temp_dir/clip" "model.safetensors" "$COMFY_DIR/models/clip_vision"
+  mv -f \
+    "$COMFY_DIR/models/clip_vision/model.safetensors" \
+    "$COMFY_DIR/models/clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+
+  download_hf_files "$IPADAPTER_FACEID_REPO" "$temp_dir/faceid" \
+    ip-adapter-faceid-plusv2_sd15.bin \
+    ip-adapter-faceid-plusv2_sd15_lora.safetensors \
+    ip-adapter-faceid-plusv2_sdxl.bin \
+    ip-adapter-faceid-plusv2_sdxl_lora.safetensors
+
+  install_named_file "$temp_dir/faceid" "ip-adapter-faceid-plusv2_sd15.bin" "$COMFY_DIR/models/ipadapter"
+  install_named_file "$temp_dir/faceid" "ip-adapter-faceid-plusv2_sd15_lora.safetensors" "$COMFY_DIR/models/loras"
+  install_named_file "$temp_dir/faceid" "ip-adapter-faceid-plusv2_sdxl.bin" "$COMFY_DIR/models/ipadapter"
+  install_named_file "$temp_dir/faceid" "ip-adapter-faceid-plusv2_sdxl_lora.safetensors" "$COMFY_DIR/models/loras"
+
+  download_hf_files "$REALISTIC_VISION_REPO" "$temp_dir/checkpoints" \
+    realisticVisionV51_v51VAE.safetensors
+  ensure_dir "$COMFY_DIR/models/checkpoints/sd15"
+  install_named_file "$temp_dir/checkpoints" "realisticVisionV51_v51VAE.safetensors" "$COMFY_DIR/models/checkpoints/sd15"
 }
 
 download_nsfw_loras() {
@@ -369,6 +413,12 @@ Bundled community identity workflows:
   $COMMUNITY_WORKFLOW_INSTALL_DIR/simple-instantid-workflow.json
   $COMMUNITY_WORKFLOW_INSTALL_DIR/README.md
 
+Built-in IPAdapter template support:
+  INSTALL_IPADAPTER_FACEID=true installs the current ComfyUI_IPAdapter_plus stack
+  and the SD1.5/SDXL FaceID assets needed by the built-in ipadapter_faceid template.
+  Recommended template after launch:
+  Templates -> search "ipadapter" -> open ipadapter_faceid
+
 Recommended starting points on an H100:
   Open wan22_14b_i2v_official.json
   Use it when you want the input image to anchor the opening frame
@@ -422,6 +472,7 @@ Optional environment variables:
   HF_BIN         Default: auto-detect hf or huggingface-cli
   INSTALL_WANVIDEO_WRAPPER Default: false
   INSTALL_STANDIN Default: false
+  INSTALL_IPADAPTER_FACEID Default: false
   INSTALL_EXPRESSION_LORAS Default: false
   EXPRESSION_LORA_REPO Default: wangkanai/wan22-fp16-i2v-loras
   EXPRESSION_LORA_FILES Default: loras/wan/wan22-face-naturalizer.safetensors
@@ -485,6 +536,10 @@ main() {
 
   if bool_true "$INSTALL_NSFW_LORAS"; then
     download_nsfw_loras
+  fi
+
+  if bool_true "$INSTALL_IPADAPTER_FACEID"; then
+    download_ipadapter_faceid_assets
   fi
 
   if bool_true "$INSTALL_EXPRESSION_LORAS"; then

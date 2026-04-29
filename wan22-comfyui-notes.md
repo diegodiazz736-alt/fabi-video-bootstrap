@@ -1,4 +1,4 @@
-# Wan 2.2 on an H100: practical controlled-video starting point
+# Wan 2.2 on an H100 or Blackwell-class box: practical controlled-video starting point
 
 For what you described now, the strongest current starting point is the official **ComfyUI native Wan 2.2 14B I2V** workflow plus the official **Wan 2.2 14B FLF2V** workflow. That gives you both a proper start-frame-driven path and a more constrained first/last-frame path without leaving the local box.
 
@@ -18,6 +18,7 @@ Why this is the right default:
 - The upstream Wan 2.2 I2V model page shows **1280x720 single-GPU inference on at least 80 GB VRAM**, which lines up well with an H100.
 - You keep closer to current ComfyUI core nodes, so fresh-machine rebuilds are less fragile than a deep stack of custom nodes.
 - The practical H100 setup benefits from putting the heavy install on a large secondary volume like `/ephemeral` when the provider ships a tiny root disk.
+- Newer Blackwell-class GPUs need newer CUDA PyTorch wheels than the older H100-only baseline, so the bootstrap now defaults to `cu128`.
 
 ## What to start with
 
@@ -106,7 +107,7 @@ That is usually more dependable than trying to force the first pass to be "max r
 `bootstrap_comfy_wan22.sh` will:
 
 - create a Python venv
-- install PyTorch with CUDA wheels
+- install PyTorch with CUDA wheels, now defaulting to `cu128`
 - clone and update ComfyUI
 - install ComfyUI-Manager
 - download the official Wan 2.2 workflow JSON files
@@ -119,6 +120,15 @@ That is usually more dependable than trying to force the first pass to be "max r
 - optionally install `WanVideoWrapper`
 - optionally install the official `Stand-In_Preprocessor_ComfyUI`
 - optionally download Wan 2.2 `Stand-In` weights
+- optionally install `ComfyUI_IPAdapter_plus`
+- optionally install `insightface` and `onnxruntime`
+- optionally download the canonical FaceID assets for the built-in `ipadapter_faceid` template:
+  - `CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors`
+  - `ip-adapter-faceid-plusv2_sd15.bin`
+  - `ip-adapter-faceid-plusv2_sd15_lora.safetensors`
+  - `ip-adapter-faceid-plusv2_sdxl.bin`
+  - `ip-adapter-faceid-plusv2_sdxl_lora.safetensors`
+  - `sd15/realisticVisionV51_v51VAE.safetensors`
 - optionally download facial expression LoRAs, defaulting to `wan22-face-naturalizer.safetensors`
 - optionally download community NSFW LoRAs you specify via environment variables
 
@@ -130,7 +140,7 @@ That is usually more dependable than trying to force the first pass to be "max r
 - create a symlink back to `$HOME/comfy-wan-local` so the user-facing paths stay simple
 - run the Wan 2.2 ComfyUI bootstrap automatically
 - auto-detect `hf` or `huggingface-cli` for model downloads
-- pass through optional flags for `WanVideoWrapper`, `Stand-In`, and community NSFW LoRAs
+- pass through optional flags for `WanVideoWrapper`, `Stand-In`, `ComfyUI_IPAdapter_plus`, and community NSFW LoRAs
 - pass through optional facial expression LoRA settings
 
 ## Recommended first run
@@ -165,6 +175,18 @@ Use these when:
 - you want to preserve one face strongly in a new still-image scene
 - you are experimenting with identity transfer before moving back to video
 - you want a ready-made community graph rather than starting from a blank canvas
+
+Current recommendation for still-image identity preservation:
+
+- install with `INSTALL_IPADAPTER_FACEID=true`
+- in ComfyUI, use the built-in template browser and open `ipadapter_faceid`
+- prefer that built-in template over the older bundled community FaceID JSONs
+
+Why:
+
+- `ComfyUI_IPAdapter_plus` changed substantially, and older community FaceID graphs can use stale node definitions
+- the built-in template tracks the currently installed extension much more reliably
+- the built-in template is the path that was actually verified to work on the cloud box
 
 For first/last frame work:
 
@@ -211,6 +233,20 @@ INSTALL_EXPRESSION_LORAS=true \
 EXPRESSION_LORA_REPO="wangkanai/wan22-fp16-i2v-loras" \
 EXPRESSION_LORA_FILES="loras/wan/wan22-face-naturalizer.safetensors,loras/wan/wan22-action-wink-i2v-v1-low.safetensors" \
 ./install_fresh_wan_comfyui.sh
+```
+
+IPAdapter FaceID still-image path:
+
+- install with `INSTALL_IPADAPTER_FACEID=true`
+- this adds the current `ComfyUI_IPAdapter_plus` extension
+- it installs `insightface` and `onnxruntime`
+- it downloads the exact SD1.5 and SDXL FaceID files the current unified loader expects
+- it also downloads the `realisticVisionV51_v51VAE` SD1.5 checkpoint used by the built-in `ipadapter_faceid` template
+
+Example:
+
+```bash
+INSTALL_IPADAPTER_FACEID=true ./install_fresh_wan_comfyui.sh
 ```
 
 ## Sources
