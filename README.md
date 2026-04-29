@@ -11,6 +11,8 @@ Local-first bootstrap scripts and notes for running image-to-video workflows on 
   - Can optionally add `WanVideoWrapper`, the official `Stand-In` preprocessor, Wan 2.2 Stand-In weights, facial expression LoRAs, and other community LoRAs.
 - `wan22-comfyui-notes.md`
   - Practical notes for controlled Wan 2.2 usage on an H100, especially I2V and first/last-frame work.
+- `community_workflows/`
+  - Bundled community ComfyUI workflow JSONs for identity-preserving still-image experiments such as IPAdapter FaceID SDXL and Simple InstantID.
 - `bootstrap_skyreels_v3.sh`
   - Installs the official SkyReels V3 repo and local `SkyReels-V3-R2V-14B` model for multi-reference reference-to-video generation.
 - `run_skyreels_r2v.sh`
@@ -44,6 +46,8 @@ Then in the browser:
 
 - load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_i2v_official.json` for classic image-to-video
 - load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_flf2v_official.json` for first/last-frame control
+- load `$HOME/comfy-wan-local/workflows/community/ip-adapter-faceid-sdxl.json` for single-face identity preservation in a new still-image scene
+- load `$HOME/comfy-wan-local/workflows/community/simple-instantid-workflow.json` for a stronger single-face identity lock path
 - if a starter template expects fp8-scaled Wan diffusion models, switch its two Wan diffusion dropdowns to the installed fp16 pair instead of downloading extra copies immediately
 
 Optional add-on install:
@@ -94,4 +98,5 @@ Use it only if you specifically want:
 - The Wan 2.2 route is now the primary baseline because it offers official ComfyUI-native I2V and FLF2V workflows.
 - On providers with a small root disk and a large secondary volume, `install_fresh_wan_comfyui.sh` now prefers `/ephemeral/comfy-wan-local` and symlinks back to `$HOME/comfy-wan-local`.
 - `Stand-In` currently means the `WanVideoWrapper` path plus the official `Stand-In_Preprocessor_ComfyUI` node, not the pure native Wan core nodes.
+- The bundled `community_workflows` are intentionally preserved in the repo so future cloud machines get the same starting JSONs every time.
 - Community NSFW LoRAs are not official Wan releases, so they are handled as opt-in extras rather than default dependencies.

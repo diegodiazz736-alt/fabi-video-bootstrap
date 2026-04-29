@@ -6,10 +6,14 @@ set -euo pipefail
 # Defaults are tuned for an H100 box doing image-to-video and first/last-frame
 # generation, with a lighter TI2V path available for faster iteration.
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 INSTALL_ROOT="${INSTALL_ROOT:-$HOME/comfy-wan-local}"
 COMFY_DIR="${COMFY_DIR:-$INSTALL_ROOT/ComfyUI}"
 VENV_DIR="${VENV_DIR:-$INSTALL_ROOT/venv}"
 WORKFLOW_DIR="${WORKFLOW_DIR:-$INSTALL_ROOT/workflows/wan22}"
+COMMUNITY_WORKFLOW_SOURCE_DIR="${COMMUNITY_WORKFLOW_SOURCE_DIR:-$SCRIPT_DIR/community_workflows}"
+COMMUNITY_WORKFLOW_INSTALL_DIR="${COMMUNITY_WORKFLOW_INSTALL_DIR:-$INSTALL_ROOT/workflows/community}"
 MODEL_CACHE_DIR="${MODEL_CACHE_DIR:-$INSTALL_ROOT/model_cache}"
 MODEL_PRESET="${MODEL_PRESET:-a14b_i2v}"
 PYTHON_BIN="${PYTHON_BIN:-python3}"
@@ -316,6 +320,19 @@ download_workflows() {
   download_workflow "$WORKFLOW_14B_FLF2V_URL" "$WORKFLOW_DIR/wan22_14b_flf2v_official.json"
 }
 
+install_community_workflows() {
+  log "Installing bundled community identity workflows"
+  ensure_dir "$COMMUNITY_WORKFLOW_INSTALL_DIR"
+
+  if [[ ! -d "$COMMUNITY_WORKFLOW_SOURCE_DIR" ]]; then
+    echo "Missing bundled community workflows directory: $COMMUNITY_WORKFLOW_SOURCE_DIR" >&2
+    exit 1
+  fi
+
+  find "$COMMUNITY_WORKFLOW_SOURCE_DIR" -maxdepth 1 -type f \( -name '*.json' -o -name '*.md' \) \
+    -exec cp -f {} "$COMMUNITY_WORKFLOW_INSTALL_DIR/" \;
+}
+
 write_launcher() {
   local launcher="$INSTALL_ROOT/run-comfyui.sh"
   log "Writing ComfyUI launcher"
@@ -346,6 +363,11 @@ Official workflow JSON files:
   $WORKFLOW_DIR/wan22_5b_ti2v_official.json
   $WORKFLOW_DIR/wan22_14b_t2v_official.json
   $WORKFLOW_DIR/wan22_14b_flf2v_official.json
+
+Bundled community identity workflows:
+  $COMMUNITY_WORKFLOW_INSTALL_DIR/ip-adapter-faceid-sdxl.json
+  $COMMUNITY_WORKFLOW_INSTALL_DIR/simple-instantid-workflow.json
+  $COMMUNITY_WORKFLOW_INSTALL_DIR/README.md
 
 Recommended starting points on an H100:
   Open wan22_14b_i2v_official.json
@@ -429,6 +451,7 @@ main() {
   bootstrap_optional_custom_nodes
   download_common_models
   download_workflows
+  install_community_workflows
 
   case "$MODEL_PRESET" in
     a14b_i2v)

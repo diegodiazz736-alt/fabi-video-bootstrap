@@ -155,6 +155,17 @@ Then in ComfyUI:
   - `wan2.2_i2v_high_noise_14B_fp16.safetensors`
   - `wan2.2_i2v_low_noise_14B_fp16.safetensors`
 
+Bundled community still-image identity workflows:
+
+- `$HOME/comfy-wan-local/workflows/community/ip-adapter-faceid-sdxl.json`
+- `$HOME/comfy-wan-local/workflows/community/simple-instantid-workflow.json`
+
+Use these when:
+
+- you want to preserve one face strongly in a new still-image scene
+- you are experimenting with identity transfer before moving back to video
+- you want a ready-made community graph rather than starting from a blank canvas
+
 For first/last frame work:
 
 - load `$HOME/comfy-wan-local/workflows/wan22/wan22_14b_flf2v_official.json`
